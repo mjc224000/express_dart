@@ -14,12 +14,9 @@ class Application {
     _server = await HttpServer.bind(InternetAddress.anyIPv6, port);
     await for (HttpRequest req in _server) {
       var uri = req.uri;
-      print(uri.path);
-      var method = req.method;
-      // _layers['/']?['get']?.first(req,req.response,()async{});
-      var sth = Application.static("view");
-      await sth(req, req.response, () {});
-    }
+        var method = req.method;
+       _layers['/']?['get']?.first(req,req.response,()async{});
+      }
   }
 
   void get(String path, fn) {
@@ -41,13 +38,11 @@ class Application {
           ? '/index.html'
           : Uri.decodeComponent(req.uri.toString());
       var filePath = path + uri;
-      print(filePath);
       var file = File(filePath);
       if (await file.exists()) {
         req.response.headers
             .add('content-type', MimeTypes.ofFile(file).toString());
-        req.response.headers
-            .add('Cache-Control', 'public, immutable, max-age=86400');
+       req.response.headers  .add('Cache-Control', 'public, immutable, max-age=86400');
         req.response.headers.add('Accept-Ranges', 'bytes');
         req.response.headers.contentLength = await file.length();
         req.response.headers.add('Last-Modified', _startTime);
