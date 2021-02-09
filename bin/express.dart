@@ -15,7 +15,8 @@ class Application {
     await for (HttpRequest req in _server) {
       var uri = req.uri;
         var method = req.method;
-       _layers['/']?['get']?.first(req,req.response,()async{});
+       //_layers['/']?['get']?.first(req,req.response,()async{});
+       compose([_layers['/']?['get']?.first])(req,req.response,()async{});
       }
   }
 
@@ -73,8 +74,8 @@ class Application {
     _stack.keys.forEach((element) {});
   }
 
-  void compose(List fns) {
-    fns.reduce((value, element) async {
+    dynamic compose(List fns) {
+    return fns.reduce((value, element) async {
       return (HttpRequest req, HttpResponse res, next) {
         value(req, res, () => element(req, res, next));
       };
