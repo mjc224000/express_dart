@@ -11,13 +11,14 @@ class Application {
   final Map<String, Map<String, List>> _layers = {};
 
   void listen(int port) async {
-    _server = await HttpServer.bind(InternetAddress.anyIPv6, port);
+    _server = await HttpServer.bind('0.0.0.0', port);
     await for (HttpRequest req in _server) {
       var uri = req.uri;
-        var method = req.method;
-       //_layers['/']?['get']?.first(req,req.response,()async{});
-       compose([_layers['/']?['get']?.first])(req,req.response,()async{});
-      }
+      var method = req.method;
+      //_layers['/']?['get']?.first(req,req.response,()async{});
+      // compose(_layers['/']?['get']!)(req,req.response,()async{});
+      static("view")(req, req.response, () async {});
+    }
   }
 
   void get(String path, fn) {
@@ -43,7 +44,8 @@ class Application {
       if (await file.exists()) {
         req.response.headers
             .add('content-type', MimeTypes.ofFile(file).toString());
-       req.response.headers  .add('Cache-Control', 'public, immutable, max-age=86400');
+        req.response.headers
+            .add('Cache-Control', 'public, immutable, max-age=86400');
         req.response.headers.add('Accept-Ranges', 'bytes');
         req.response.headers.contentLength = await file.length();
         req.response.headers.add('Last-Modified', _startTime);
@@ -74,7 +76,7 @@ class Application {
     _stack.keys.forEach((element) {});
   }
 
-    dynamic compose(List fns) {
+  dynamic compose(List fns) {
     return fns.reduce((value, element) async {
       return (HttpRequest req, HttpResponse res, next) {
         value(req, res, () => element(req, res, next));
