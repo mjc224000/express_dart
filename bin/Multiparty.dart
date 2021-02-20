@@ -20,6 +20,8 @@ class MultipartyFile {
   late String fieldName;
 }
 
+void f(int a) {}
+
 class Multiparty implements StreamConsumer<Uint8List> {
   String contentType;
   String Content_Type = 'Content-Type:';
@@ -30,9 +32,9 @@ class Multiparty implements StreamConsumer<Uint8List> {
   late File curFile;
   late RandomAccessFile access;
   Status _status = Status.begin;
-  late num count = 0;
   var fileList = <MultipartyFile>[];
   var buffer = <int>[];
+  var bufferList = <List<int>>[];
   var boundaryIndex = 0;
   var boundary_reg = RegExp('(?:boundary=)([\-0-9a-zA-Z]+)');
   var file_spec_filename_reg = RegExp('filename\="([^"]*)"', multiLine: true);
@@ -80,36 +82,37 @@ class Multiparty implements StreamConsumer<Uint8List> {
     }
   }
 
-  Future handleSaveData(int c) async {
-/*    buffer.add(c);
-    if (buffer.length > 12240) {
-      await  fileList.last.originFile
-          .writeAsBytes(buffer, mode: FileMode.append);
+  void handleSaveData(int c) {
+    var char = String.fromCharCode(c);
+/*    if (buffer.length > 12240) {
+      fileList.last.originFile.writeAsBytes(buffer, mode: FileMode.append);
       buffer.clear();
     }*/
-
-    //  print(String.fromCharCodes(buffer)+"buff'");
-    /*  if (char == _middle_boundary[boundaryIndex]) {
+  if (char == _middle_boundary[boundaryIndex]) {
       buffer.add(c);
       boundaryIndex++;
+      if (boundaryIndex == _middle_boundary.length) {
+        print(c.toString() + ' : ' + char);
+        print(String.fromCharCodes(buffer));
+        _status = Status.file_spec;
+        boundaryIndex = 0;
+        buffer.clear();
+      }
       return;
+    } else {
+      boundaryIndex = 0;
     }
 
-    if (buffer.isNotEmpty) {
-      buffer.add(c);
-      var access = curFile.openWrite();
-      buffer.forEach((element) {
-        access.writeCharCode(element);
-      });
-      buffer.clear();
-      boundaryIndex = 0;
-      await access.close();
-      return;
-    }*/
+    buffer.add(c);
   }
 
-  Future parser(int c) async {
+  void parser(int c) {
     switch (_status) {
+      case Status.data:
+        {
+          handleSaveData(c);
+          break;
+        }
       case Status.file_spec:
         {
           handleFileSpec(c);
@@ -126,16 +129,10 @@ class Multiparty implements StreamConsumer<Uint8List> {
             boundaryIndex = 0;
           }
           if (boundaryIndex == _start_boundary.length) {
-            //  print('解析到一个');
             _status = Status.file_spec;
             buffer.clear();
             boundaryIndex = 0;
           }
-          break;
-        }
-      case Status.data:
-        {
-          await handleSaveData(c);
           break;
         }
 
@@ -148,21 +145,27 @@ class Multiparty implements StreamConsumer<Uint8List> {
     }
   }
 
+  int as() {
+    return 1;
+  }
+
   @override
   Future addStream(Stream<Uint8List> stream) async {
     var e = contentLength - _end_boundary.length;
+    var count = 0;
+    var mb = 1024 * 1024;
     await stream.forEach((element) async {
-      /* for (var i = 0; i < element.length; i++) {
-        if (count < e) {
-          if (count % 1024 == 0) {
-            print(count / 1024);
-          }
-          await parser(element[i]);
-          count++;
+      for (var i = 0; i < element.length; i++) {
+        count++;
+        if (count <= e) {
+          parser(element[i]);
         }
-      }*/
-      print(element.length);
+        if (count % mb == 0) {
+          print(count / mb);
+        }
+      }
     });
+
     return Future(() {});
   }
 
